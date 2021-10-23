@@ -3,8 +3,8 @@ import os
 import can
 import dbus
 import dbus.mainloop.glib
-import sys
 import bluetoothctl
+import time
 
 # Variablen zum aendern
 nCanBitrate = 100000
@@ -25,37 +25,8 @@ bMeinHandyWarImRadius = False
 sLetzteMac = ''
 bBluetoothConnected = False
 
-# CAN
-def CanInit():
-  os.system('sudo ip link set can0 type can bitrate ' + str(nCanBitrate))
-  os.system('sudo ifconfig can0 up')
-  os.system('sudo ip link set can1 type can bitrate ' + str(nCanBitrate))
-  os.system('sudo ifconfig can1 up')
-  oCan = can.interface.Bus(channel = sConnectedToCarCan, bustyp = 'socketcan_ctypes')
-
-def CanDeInit():
-  os.system('sudo ifconfig can0 down')
-  os.system('sudo ifconfig can1 down')
-  oCan = None
-
-def GetCanMessage():
-  if not oCan:
-    return None
-  else:
-    return oCan.recv()
-
 # MediaControls
-def DbusInit():
-  dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
-  oBus = dbus.SystemBus()
-  oBlueZ = oBus.get_object('org.bluez', "/")
-  oObjMgr = dbus.Interface(oBlueZ, 'org.freedesktop.DBus.ObjectManager')
-
 def MediaControlsExists():
-  if not oObjMgr:
-    # ObjectManager ist noch da
-    return False
-
   for path, ifaces in oObjMgr.GetManagedObjects().items():
     if 'org.bluez.MediaPlayer1' in ifaces:
       oMediaPlayerInterface = dbus.Interface(oBus.get_object('org.bluez', path), 'org.bluez.MediaPlayer1')
@@ -67,6 +38,40 @@ def MediaControlsExists():
   else:
     return True
 
+
+# DBus init
+dbus.mainloop.glib.DBusGMainLoop(set_as_default = True)
+oBus = dbus.SystemBus()
+oBlueZ = oBus.get_object('org.bluez', "/")
+oObjMgr = dbus.Interface(oBlueZ, 'org.freedesktop.DBus.ObjectManager')
+
 while True:
-  print 'Test'
-  break
+  try:
+    while not (bluetoothctl.something_connected() and MediaControlsExists()):
+      time.sleep(1)
+
+    # Init Can
+    os.system('sudo ip link set can0 type can bitrate ' + str(nCanBitrate))
+    os.system('sudo ifconfig can0 up')
+    os.system('sudo ip link set can1 type can bitrate ' + str(nCanBitrate))
+    os.system('sudo ifconfig can1 up')
+    oCan = can.interface.Bus(channel = sConnectedToCarCan, bustyp = 'socketcan_ctypes')
+    
+    while (bluetoothctl.something_connected() and MediaControlsExists()):
+      msg = oCan.recv()
+      print msg
+
+    # Deinit Can  
+    os.system('sudo ifconfig can0 down')
+    os.system('sudo ifconfig can1 down')
+    oCan = None
+
+  except Exception as e:
+    print 'Exception ' + str(e)
+    
+    # Deinit Can  
+    os.system('sudo ifconfig can0 down')
+    os.system('sudo ifconfig can1 down')
+    oCan = None
+
+    time.sleep(1)
