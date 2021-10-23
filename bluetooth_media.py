@@ -12,6 +12,20 @@ nCanBitrate = 100000
 sConnectedToCarCan = 'can0' # oder can1
 sBluetoothMACVonMeinemHandy = 'AC:D6:18:1C:ED:4C'
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # NICHT ZUM AENDERN
 # Vars
 oCan = None
@@ -23,8 +37,6 @@ oBluez = None
 oObjMgr = None
 
 bMeinHandyWarImRadius = False
-sLetzteMac = ''
-bBluetoothConnected = False
 
 #DBus init
 def DBusInit():
@@ -95,26 +107,43 @@ def HandleMessage(msg):
     oMediaPlayerInterface.Previous()
   elif msg.arbitration_id == 4: # TODO Herausfinden
     vol = int(data[0])
-    if vol not in range(0, 128):
-      print 'Possible Values: 0-127'
-    oTransportInterface.Set('org.bluez.MediaTransport1', 'Volume', dbus.UInt16(vol))
+    if vol in range(0, 128): # 0-127 // 00-7F
+      oTransportInterface.Set('org.bluez.MediaTransport1', 'Volume', dbus.UInt16(vol))
 
-DBusInit()
 
-while True:
-  try:
-    while not (bluetoothctl.something_connected() and MediaControlsExists()):
-      # TODO
-      # warten
+if __name__ == '__main__':
+  DBusInit()
+  while True:
+    try:
+      while not (bluetoothctl.something_connected() and MediaControlsExists()):
+        macs = bluetoothctl.scan(5)
+        bScanMeinHandyWarImRadius = False
+        for mac in macs:
+          
+          # Sonderfaelle
+          if mac == sBluetoothMACVonMeinemHandy:
+            bScanMeinHandyWarImRadius = True
+            if bMeinHandyWarImRadius:
+              # Verbindung herstellen zu meinem Telefon, wenn es ausserhalb des Radius war
+              bluetoothctl.connect(mac)
+              bMeinHandyWarImRadius = True
+              break
+        
+        bMeinHandyWarImRadius = bScanMeinHandyWarImRadius
+        
+        # warten
+        time.sleep(1)
+
+      CanInit()
+
+      # Volume auf Max
+      oTransportInterface.Set('org.bluez.MediaTransport1', 'Volume', dbus.UInt16(127))
+
+      while (bluetoothctl.something_connected() and MediaControlsExists()):
+        HandleMessage(oCan.recv())
+      DeInitCan()
+
+    except Exception as e:
+      print 'Exception ' + str(e)
+      DeInitCan()
       time.sleep(1)
-
-    CanInit()
-
-    while (bluetoothctl.something_connected() and MediaControlsExists()):
-      HandleMessage(oCan.recv())
-
-    DeInitCan()
-  except Exception as e:
-    print 'Exception ' + str(e)
-    DeInitCan()
-    time.sleep(1)

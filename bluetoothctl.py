@@ -1,4 +1,5 @@
 import subprocess
+from sys import stdout
 import time
 
 class Device:
@@ -6,11 +7,22 @@ class Device:
     bConnected = False
 
 def scan(scan_timeout = 20):
-    p = subprocess.Popen(["bluetoothctl", "scan", "on"])
+    aRtn = list()
+    p = subprocess.Popen(["bluetoothctl", "scan", "on"], stdout=subprocess.PIPE)
     time.sleep(scan_timeout)
     p.terminate()
-    return __devices()
+    out = p.stdout.read()
 
+    lines = out.splitlines()
+    for line in lines:
+        splitted = line.split(' ')
+        if splitted[1] == "Device":
+            aRtn.append(splitted[2])
+            
+    return aRtn
+
+def info(mac_address):
+    return subprocess.check_output("bluetoothctl info {}".format(mac_address), shell = True).decode()
 
 def __devices():
     aRtn = list()
@@ -32,23 +44,32 @@ def __devices():
             aRtn.append(NewDevice)
     return aRtn
 
-
-def info():
-    return subprocess.check_output("bluetoothctl info", shell = True).decode()
-
 def pair(mac_address):
-    subprocess.check_output("bluetoothctl pair {}".format(mac_address), shell = True)
+    p = subprocess.Popen("bluetoothctl pair {}".format(mac_address), shell = True)
+    p.wait()
 
 def trust(mac_address):
-  subprocess.check_output("bluetoothctl trust {}".format(mac_address), shell = True)
+    p = subprocess.Popen("bluetoothctl trust {}".format(mac_address), shell = True)
+    p.wait()
+
+def trusted(mac_address):
+    bRtn = False
+    lines = subprocess.check_output("bluetoothctl info {}".format(mac_address), shell = True).decode().splitlines()
+
+    for line in lines:
+        if line.__contains__("Trusted: "):
+            bRtn = line.__contains__("yes")
+    return bRtn
 
 
 def remove(mac_address):
-    subprocess.check_output("bluetoothctl remove {}".format(mac_address), shell = True)
+    p = subprocess.Popen("bluetoothctl remove {}".format(mac_address), shell = True)
+    p.wait()
 
 
 def connect(mac_address):
-    subprocess.check_output("bluetoothctl connect {}".format(mac_address), shell = True)
+    p = subprocess.Popen("bluetoothctl connect {}".format(mac_address), shell = True)
+    p.wait()
 
 
 def disconnect():
