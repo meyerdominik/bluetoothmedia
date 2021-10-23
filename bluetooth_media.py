@@ -129,7 +129,8 @@ if __name__ == '__main__':
               bMeinHandyWarImRadius = True
               break
         
-        bMeinHandyWarImRadius = bScanMeinHandyWarImRadius
+        if not bMeinHandyWarImRadius:
+          bMeinHandyWarImRadius = bScanMeinHandyWarImRadius
         
         # warten
         time.sleep(1)

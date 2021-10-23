@@ -11,9 +11,8 @@ def scan(scan_timeout = 20):
     p = subprocess.Popen(["bluetoothctl", "scan", "on"], stdout=subprocess.PIPE)
     time.sleep(scan_timeout)
     p.terminate()
-    out = p.stdout.read()
 
-    lines = out.splitlines()
+    lines = p.stdout.read().splitlines()
     for line in lines:
         splitted = line.split(' ')
         if splitted[1] == "Device":
