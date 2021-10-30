@@ -40,7 +40,7 @@ if __name__ == '__main__':
     mgr = dbus.Interface(obj, 'org.freedesktop.DBus.ObjectManager')
     player_iface = None
     transport_prop_iface = None
-    for path, ifaces in mgr.GetManagedObjects().items(): 
+    for path, ifaces in mgr.GetManagedObjects().items():
        if 'org.bluez.MediaPlayer1' in ifaces:
             player_iface = dbus.Interface(
                     bus.get_object('org.bluez', path),

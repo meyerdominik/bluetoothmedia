@@ -119,18 +119,17 @@ if __name__ == '__main__':
         macs = bluetoothctl.scan(5)
         bScanMeinHandyWarImRadius = False
         for mac in macs:
-          
           # Sonderfaelle
           if mac == sBluetoothMACVonMeinemHandy:
             bScanMeinHandyWarImRadius = True
-            if bMeinHandyWarImRadius:
+            if not bMeinHandyWarImRadius:
               # Verbindung herstellen zu meinem Telefon, wenn es ausserhalb des Radius war
               bluetoothctl.connect(mac)
-              bMeinHandyWarImRadius = True
+              bScanMeinHandyWarImRadius = True
               break
         
-        if not bMeinHandyWarImRadius:
-          bMeinHandyWarImRadius = bScanMeinHandyWarImRadius
+        if bMeinHandyWarImRadius and not bScanMeinHandyWarImRadius:
+          bMeinHandyWarImRadius = False
         
         # warten
         time.sleep(1)
