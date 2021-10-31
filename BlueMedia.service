@@ -1,0 +1,15 @@
+[Unit]
+Description=Bluetooth Media
+After=multi-user.target
+
+
+[Service]
+Type=simple
+Restart=always
+User=pi
+ExecStart=python /home/pi/bluetoothmedia/bluetooth_media.py
+ExecStartPost= python /home/pi/bluetoothmedia/can_reset.py
+StandardInput=tty-force
+
+[Install]
+WantedBy=multi-user.target
