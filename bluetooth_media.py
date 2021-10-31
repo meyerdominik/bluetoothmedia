@@ -38,6 +38,8 @@ oObjMgr = None
 
 bMeinHandyWarImRadius = False
 
+bNoKeysPressed = True # Doppelte Nachrichten abfangen
+
 #DBus init
 def DBusInit():
   global oBus
@@ -87,8 +89,10 @@ def MediaControlsExists():
 
 
 def HandleMessage(msg):
+  # https://www.loopybunny.co.uk/CarPC/can/1D6.html
   global oMediaPlayerInterface 
   global oTransportInterface 
+  global bNoKeysPressed
 
   ByteStruct = ""
   for i in range(msg.dlc):
@@ -97,18 +101,22 @@ def HandleMessage(msg):
   data = struct.unpack(ByteStruct, msg.data)
 
   # msg.arbitration_id, msg.data
-  if msg.arbitration_id == 0:
-    oMediaPlayerInterface.Play()
-  elif msg.arbitration_id == 1: # TODO Herausfinden
-    oMediaPlayerInterface.Pause()
-  elif msg.arbitration_id == 2: # TODO Herausfinden
-    oMediaPlayerInterface.Next()
-  elif msg.arbitration_id == 3: # TODO Herausfinden
-    oMediaPlayerInterface.Previous()
-  elif msg.arbitration_id == 4: # TODO Herausfinden
-    vol = int(data[0])
-    if vol in range(0, 128): # 0-127 // 00-7F
-      oTransportInterface.Set('org.bluez.MediaTransport1', 'Volume', dbus.UInt16(vol))
+  if msg.arbitration_id == 470: # 0x1D6
+    if len(data) >= 2:
+      if data[0] == 0xC0 and data[1] == 0x0C:
+        bNoKeysPressed = True
+      elif data[0] == 0xE0 and data[1] == 0x0C and bNoKeysPressed: # Up Button
+        oMediaPlayerInterface.Next()
+        bNoKeysPressed = False
+      elif data[0] == 0xD0 and data[1] == 0x0C and bNoKeysPressed: # Down Button
+        oMediaPlayerInterface.Previous()
+        bNoKeysPressed = False
+      elif data[0] == 0xC0 and data[1] == 0x0D and bNoKeysPressed: # Voice button
+        oMediaPlayerInterface.Play()
+        bNoKeysPressed = False
+      elif data[0] == 0xC1 and data[1] == 0x0C and bNoKeysPressed: # Telephone Button
+        oMediaPlayerInterface.Pause()
+        bNoKeysPressed = False
 
 
 if __name__ == '__main__':
